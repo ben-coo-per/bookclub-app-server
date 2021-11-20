@@ -1,0 +1,50 @@
+{
+  "name": "bookclubbuddy",
+  "version": "1.0.0",
+  "description": "Bookclub gamification and tracking",
+  "main": "index.js",
+  "scripts": {
+    "watch": "tsc -w",
+    "dev": "nodemon dist/index.js",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "node",
+    "fullstack",
+    "tutorial"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/async-retry": "^1.4.3",
+    "@types/connect-redis": "0.0.17",
+    "@types/cors": "^2.8.12",
+    "@types/express": "^4.17.13",
+    "@types/express-session": "^1.17.4",
+    "@types/ioredis": "^4.28.1",
+    "@types/lru-cache": "^5.1.1",
+    "@types/node": "^16.11.5",
+    "@types/nodemailer": "^6.4.4",
+    "@types/redis": "^2.8.32",
+    "@types/uuid": "^8.3.1",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "apollo-server-express": "^3.4.0",
+    "argon2": "^0.28.2",
+    "connect-redis": "^6.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-session": "^1.17.2",
+    "graphql": "^15.6.1",
+    "ioredis": "^4.28.0",
+    "nodemailer": "^6.7.0",
+    "nodemon": "^2.0.14",
+    "pg": "^8.7.1",
+    "reflect-metadata": "^0.1.13",
+    "ts-node": "^10.4.0",
+    "type-graphql": "^1.1.1",
+    "typeorm": "^0.2.40",
+    "uuid": "^8.3.2"
+  }
+}

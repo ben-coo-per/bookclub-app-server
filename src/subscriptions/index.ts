@@ -1,0 +1,1 @@
+export { ReadingRatingSubscriber } from "./rating";
