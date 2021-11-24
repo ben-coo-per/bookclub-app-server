@@ -5,7 +5,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
+  OneToOne,
   BaseEntity,
 } from "typeorm";
 import { User, Reading } from ".";
@@ -29,7 +29,7 @@ export class Rating extends BaseEntity {
   @Column()
   userId: number;
 
-  @ManyToOne(() => User, (user) => user.ratings, {
+  @OneToOne(() => User, (user) => user.ratings, {
     onDelete: "CASCADE",
     cascade: true,
   })
@@ -39,7 +39,7 @@ export class Rating extends BaseEntity {
   @Column({ type: "integer" })
   readingId: number;
 
-  @ManyToOne(() => Reading, (reading) => reading.ratings, {
+  @OneToOne(() => Reading, (reading) => reading.ratings, {
     onDelete: "CASCADE",
     cascade: true,
   })

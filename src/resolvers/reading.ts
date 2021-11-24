@@ -55,11 +55,19 @@ export class ReadingResolver {
   }
 
   @Query(() => [Reading], { description: "Get all Current Readings" })
-  currentlyReading(): Promise<Reading[]> {
-    return Reading.find({ currentlyReading: true });
+  async currentlyReading(): Promise<Reading[]> {
+    const currentReadings = await getConnection()
+      .createQueryBuilder()
+      .select("*")
+      .from(Reading, "")
+      .where('"currentlyReading" = :currentlyReading', {
+        currentlyReading: true,
+      })
+      .execute();
+
+    return currentReadings;
   }
 
-  // GET SPECIFIC READING QUERY
   @Query(() => Reading, {
     nullable: true,
     description: "Get Reading based on given ID",
@@ -68,7 +76,15 @@ export class ReadingResolver {
     return Reading.findOne(id);
   }
 
-  // CREATE READING MUTATION
+  // @Query(() => Reading, {
+  //   nullable: true,
+  //   description: "Get Reading based on given ID",
+  // })
+  // readings(@Arg("id", () => Int) id: number): Promise<Reading | undefined> {
+  //   return Reading.findOne(id);
+  // }
+
+  // MUTATIONS
   @Mutation(() => Reading, { description: "Create a new Reading" })
   @UseMiddleware(isAuth)
   async createReading(

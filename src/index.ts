@@ -7,11 +7,17 @@ import { buildSchema } from "type-graphql";
 import { RedisStore, redis, session } from "./redis";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import cors from "cors";
-
-import { UserResolver, ReadingResolver, RatingResolver } from "./resolvers";
 import { createConnection } from "typeorm";
-import { Reading, User, Rating } from "./entities";
+
+import {
+  UserResolver,
+  ReadingResolver,
+  RatingResolver,
+  MeetingResolver,
+} from "./resolvers";
+import { Reading, User, Rating, Meeting } from "./entities";
 import { ReadingRatingSubscriber } from "./subscriptions";
+import { MeetingToReading } from "./entities/MeetingToReading";
 
 const main = async () => {
   //Initialize Typeorm
@@ -22,7 +28,7 @@ const main = async () => {
     database: "postgres",
     logging: true,
     synchronize: true,
-    entities: [User, Reading, Rating],
+    entities: [User, Reading, Rating, Meeting, MeetingToReading],
     subscribers: [ReadingRatingSubscriber],
   });
 
@@ -55,10 +61,19 @@ const main = async () => {
   // Setting up Apollo server
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [ReadingResolver, UserResolver, RatingResolver],
+      resolvers: [
+        ReadingResolver,
+        UserResolver,
+        RatingResolver,
+        MeetingResolver,
+      ],
       validate: false,
     }),
-    context: ({ req, res }) => ({ req, res, redis }),
+    context: ({ req, res }: any) => ({
+      req,
+      res,
+      redis,
+    }),
     plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
   });
 

@@ -4,11 +4,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinTable,
+  JoinColumn,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { MeetingToReading } from "./MeetingToReading";
 import { Rating } from "./Rating";
 
 export enum ReadingType {
@@ -24,7 +25,7 @@ registerEnumType(ReadingType, {
 
 @ObjectType({
   description:
-    "A Reading the club has completed. Could be a book, article, play, etc.",
+    "A Reading that the group either completed or are currently reading. Could be a book, article, play, etc.",
 })
 @Entity()
 export class Reading extends BaseEntity {
@@ -47,7 +48,7 @@ export class Reading extends BaseEntity {
   @OneToMany(() => Rating, (rating) => rating.reading, {
     eager: true,
   })
-  @JoinTable()
+  @JoinColumn()
   ratings: Rating[];
 
   @Field(() => Float, { nullable: true })
@@ -66,15 +67,13 @@ export class Reading extends BaseEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // @Field(() => [Meeting])
-  // @ManyToMany(() => Meeting, "reading", { owner: true })
-  // meetings = new Collection<Meeting>(this);
+  @Field(() => Int, { nullable: true })
+  @Column({ nullable: true })
+  createdBy?: number;
 
-  // @Field(() => String, { nullable: true })
-  // @Property({ type: "date", nullable: true })
-  // dateOfFirstMeeting: Date;
-
-  // @Field(() => String, { nullable: true })
-  // @Property({ type: "date", nullable: true })
-  // dateOfLastMeeting: Date;
+  @OneToMany(
+    () => MeetingToReading,
+    (meetingToReading) => meetingToReading.reading
+  )
+  public meetingToReading!: MeetingToReading[];
 }
