@@ -24,56 +24,232 @@ class MeetingInput {
   readingIds?: number[];
 
   @Field({ nullable: true })
-  readingAssignment?: string;
+  meetingLink?: string;
 
   @Field({ nullable: true })
-  meetingLink?: string;
+  readingAssigmentType?: string;
+
+  @Field({ nullable: true })
+  readingAssignmentStart?: string;
+
+  @Field({ nullable: true })
+  readingAssignmentEnd?: string;
 }
 
 @ObjectType()
-class MeetingResponse {
-  @Field(() => Meeting, { nullable: true })
-  meeting: Meeting;
+export class AllMeetingsResponse {
+  @Field(() => String, { nullable: true })
+  nextCursor?: Date | null;
+
+  @Field(() => String, { nullable: true })
+  previousCursor?: Date | null;
+
+  @Field(() => [Meeting], { nullable: true })
+  meetings?: Meeting[];
+}
+
+@ObjectType()
+class ReadingAssignmentsResponse {
+  @Field()
+  readingId: number;
+
+  @Field()
+  meetingId: number;
+
+  @Field({ nullable: true })
+  readingAssigmentType?: string;
+
+  @Field({ nullable: true })
+  readingAssignmentStart?: string;
+
+  @Field({ nullable: true })
+  readingAssignmentEnd?: string;
+
+  @Field({ nullable: true })
+  title?: string;
+
+  @Field({ nullable: true })
+  author?: string;
+
+  @Field(() => String, { nullable: true })
+  meetingDate?: Date;
 }
 
 @Resolver()
 export class MeetingResolver {
-  @Query(() => [Meeting])
-  async allMeetings() {
-    return await Meeting.find();
+  @Query(() => AllMeetingsResponse, { description: "Get all Meetings" })
+  async allMeetings(
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
+    @Arg("limit", () => Int) limit: number
+  ): Promise<AllMeetingsResponse> {
+    const realLimit = Math.min(50, limit);
+    const qb = getConnection()
+      .getRepository(Meeting)
+      .createQueryBuilder("r")
+      .orderBy('"meetingDate"', "DESC")
+      .take(realLimit);
+
+    if (cursor) {
+      qb.where('"meetingDate" < :cursor', {
+        cursor: new Date(parseInt(cursor)),
+      });
+    }
+    const meetings = await qb.getMany();
+    const allPostsLoaded = meetings.length < realLimit;
+
+    const previousCursor = !allPostsLoaded
+      ? meetings[meetings.length - 1].meetingDate
+      : null;
+
+    return {
+      meetings: meetings,
+      nextCursor: null,
+      previousCursor: previousCursor,
+    };
   }
 
-  @Query(() => [Meeting])
-  async currentReadingMeetings() {
+  @Query(() => AllMeetingsResponse, { description: "Get meetings by month" })
+  async meetingsByMonth(
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null
+  ): Promise<AllMeetingsResponse> {
+    const date = cursor ? new Date(parseInt(cursor)) : new Date();
+
+    let firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+    let lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    let startOfLastMonth = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+    let endOfNextMonth = new Date(date.getFullYear(), date.getMonth() + 2, 0);
+    let nextMonth;
+    let previousMonth;
+
+    // Get all meetings from this month and the following month
+    let allMeetings = await getConnection()
+      .createQueryBuilder()
+      .select()
+      .from(Meeting, "meeting")
+      .orderBy('"meetingDate"', "DESC")
+      .where('"meetingDate" > :start', {
+        start: startOfLastMonth,
+      })
+      .andWhere('"meetingDate" < :end', {
+        end: endOfNextMonth,
+      })
+      .execute();
+
+    // Filter down to the meetings for this month -> what the user actually wants back
+    let meetings = allMeetings.filter(
+      (meeting: Meeting) =>
+        meeting.meetingDate < lastDay && meeting.meetingDate > firstDay
+    );
+
+    // If there are no meetings for this month, set allmeetings to the meetigns from last month
+    if (meetings.length == 0) {
+      let twoMonthsAgo = new Date(date.getFullYear(), date.getMonth() - 2, 1);
+      allMeetings = await getConnection()
+        .createQueryBuilder()
+        .select()
+        .from(Meeting, "meeting")
+        .orderBy('"meetingDate"', "DESC")
+        .where('"meetingDate" > :start', {
+          start: twoMonthsAgo,
+        })
+        .execute();
+
+      meetings = allMeetings.filter(
+        (meeting: Meeting) => meeting.meetingDate > startOfLastMonth
+      );
+
+      // If the meetings for previous month array is not 0 (i.e. if there are meetings for the previous month), return the previousMonth cursor
+      // If not, return null
+      const previousMonthsMeetings = allMeetings.filter(
+        (meeting: Meeting) => meeting.meetingDate < startOfLastMonth
+      );
+      previousMonth = previousMonthsMeetings.length > 0 ? twoMonthsAgo : null;
+    } else {
+      // If the meetings for next month array is not 0 (i.e. if there are meetings for the next month), return the nextMonth cursor
+      // If not, return null
+      const nextMonthsMeetings = allMeetings.filter(
+        (meeting: Meeting) => meeting.meetingDate > lastDay
+      );
+      nextMonth =
+        nextMonthsMeetings.length > 0
+          ? new Date(date.getFullYear(), date.getMonth() + 1, 1)
+          : null;
+
+      // If the meetings for previous month array is not 0 (i.e. if there are meetings for the previous month), return the previousMonth cursor
+      // If not, return null
+      const previousMonthsMeetings = allMeetings.filter(
+        (meeting: Meeting) => meeting.meetingDate < firstDay
+      );
+      previousMonth =
+        previousMonthsMeetings.length > 0 ? startOfLastMonth : null;
+    }
+
+    return {
+      meetings: meetings,
+      nextCursor: nextMonth,
+      previousCursor: previousMonth,
+    };
+  }
+
+  // @Query(() => [ReadingAssignmentsResponse])
+  // async currentReadingAssignments() {
+  //   const currentReadingMeetings = await getConnection()
+  //     .getRepository(Reading)
+  //     .createQueryBuilder("r")
+  //     .where({ currentlyReading: true })
+  //     .innerJoinAndSelect("r.meetingToReading", "mtr")
+  //     .leftJoinAndSelect("mtr.meeting", "m")
+  //     .getRawMany();
+
+  //   let readingAssignments = currentReadingMeetings.map((rm) => {
+  //     return {
+  //       readingId: rm.r_id,
+  //       meetingId: rm.m_id,
+  //       readingAssigmentType: rm.mtr_readingAssigmentType,
+  //       readingAssignmentStart: rm.mtr_readingAssignmentStart,
+  //       readingAssignmentEnd: rm.mtr_readingAssignmentEnd,
+
+  //       meetingDate: rm.m_meetingDate,
+  //     };
+  //   });
+
+  //   return readingAssignments;
+  // }
+
+  @Query(() => [ReadingAssignmentsResponse])
+  async readingAssignments(
+    @Arg("meetingId", () => Int, { nullable: true }) meetingId: number | null
+  ) {
     const currentReadingMeetings = await getConnection()
-      .getRepository(Reading)
-      .createQueryBuilder("r")
-      .where({ currentlyReading: true })
-      .innerJoin("r.meetingToReading", "mtr")
-      .leftJoinAndSelect("mtr.meeting", "m")
+      .getRepository(Meeting)
+      .createQueryBuilder("m")
+      .where({ id: meetingId })
+      .innerJoinAndSelect("m.meetingToReading", "mtr")
+      .leftJoinAndSelect("mtr.reading", "r")
       .getRawMany();
 
-    let meetings = currentReadingMeetings.map((rm) => {
+    let readingAssignments = currentReadingMeetings.map((rm) => {
       return {
-        id: rm.m_id,
+        readingId: rm.r_id,
+        meetingId: rm.m_id,
+        readingAssigmentType: rm.mtr_readingAssigmentType,
+        readingAssignmentStart: rm.mtr_readingAssignmentStart,
+        readingAssignmentEnd: rm.mtr_readingAssignmentEnd,
+        author: rm.r_author,
+        title: rm.r_title,
         meetingDate: rm.m_meetingDate,
-        readingAssignment: rm.m_readingAssignment,
-        createdAt: rm.m_createdAt,
-        updatedAt: rm.m_updatedAt,
       };
     });
 
-    return meetings;
+    return readingAssignments;
   }
 
   @Mutation(() => Meeting)
-  @UseMiddleware(isAuth)
   async createMeeting(
     @Arg("data", () => MeetingInput) meetingInput: MeetingInput
   ) {
     const meeting = await Meeting.create({
       meetingDate: meetingInput.meetingDate,
-      readingAssignment: meetingInput.readingAssignment,
       meetingLink: meetingInput.meetingLink,
     }).save();
 
@@ -94,6 +270,9 @@ export class MeetingResolver {
         mtr.readingId = reading.id;
         mtr.meeting = meeting;
         mtr.reading = reading;
+        mtr.readingAssigmentType = meetingInput.readingAssigmentType;
+        mtr.readingAssignmentStart = meetingInput.readingAssignmentStart;
+        mtr.readingAssignmentEnd = meetingInput.readingAssignmentEnd;
         await getConnection().manager.save(mtr);
       });
     }
@@ -101,11 +280,3 @@ export class MeetingResolver {
     return meeting;
   }
 }
-
-/// How to handle getting Readings from Meeting
-// const stuff = await getConnection()
-// .getRepository(Meeting)
-// .createQueryBuilder("m")
-// .innerJoin("m.meetingToReading", "mtr")
-// .leftJoinAndSelect("mtr.reading", "r")
-// .execute();

@@ -18,6 +18,8 @@ import {
 import { Reading, User, Rating, Meeting } from "./entities";
 import { ReadingRatingSubscriber } from "./subscriptions";
 import { MeetingToReading } from "./entities/MeetingToReading";
+import { Attendance } from "./entities/Attendance";
+import { AttendanceResolver } from "./resolvers/attendance";
 
 const main = async () => {
   //Initialize Typeorm
@@ -28,7 +30,7 @@ const main = async () => {
     database: "postgres",
     logging: true,
     synchronize: true,
-    entities: [User, Reading, Rating, Meeting, MeetingToReading],
+    entities: [User, Reading, Rating, Meeting, MeetingToReading, Attendance],
     subscribers: [ReadingRatingSubscriber],
   });
 
@@ -66,6 +68,7 @@ const main = async () => {
         UserResolver,
         RatingResolver,
         MeetingResolver,
+        AttendanceResolver,
       ],
       validate: false,
     }),

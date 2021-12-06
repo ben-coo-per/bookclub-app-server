@@ -17,4 +17,13 @@ export class MeetingToReading {
 
   @ManyToOne(() => Reading, (reading) => reading.meetingToReading)
   public reading!: Reading;
+
+  @Column({ nullable: true })
+  public readingAssigmentType?: string;
+
+  @Column({ nullable: true })
+  public readingAssignmentStart?: string;
+
+  @Column({ nullable: true })
+  public readingAssignmentEnd?: string;
 }

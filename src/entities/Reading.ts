@@ -59,6 +59,7 @@ export class Reading extends BaseEntity {
   @Column({ default: true })
   currentlyReading: boolean;
 
+  // UTIL STUFF
   @Field(() => String)
   @CreateDateColumn()
   createdAt: Date;

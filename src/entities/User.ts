@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Rating } from "./Rating";
+import { Attendance } from "./Attendance";
 
 @ObjectType()
 @Entity()
@@ -38,4 +39,7 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Rating, (rating) => rating.user)
   ratings: Rating[];
+
+  @OneToMany(() => Attendance, (attendance) => attendance.user)
+  public attendance!: Attendance[];
 }

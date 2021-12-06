@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import { Attendance } from "./Attendance";
 import { MeetingToReading } from "./MeetingToReading";
 
 @ObjectType({
@@ -15,14 +16,6 @@ import { MeetingToReading } from "./MeetingToReading";
 })
 @Entity()
 export class Meeting extends BaseEntity {
-  @Field(() => String)
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @Field(() => String)
-  @UpdateDateColumn()
-  updatedAt: Date;
-
   @Field(() => Int)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -33,15 +26,23 @@ export class Meeting extends BaseEntity {
 
   @Field(() => String, { nullable: true })
   @Column({ nullable: true })
-  readingAssignment: string;
-
-  @Field(() => String, { nullable: true })
-  @Column({ nullable: true })
   meetingLink: string;
+
+  // UTIL STUFF
+  @Field(() => String)
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @Field(() => String)
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @OneToMany(
     () => MeetingToReading,
     (meetingToReading) => meetingToReading.meeting
   )
   public meetingToReading!: MeetingToReading[];
+
+  @OneToMany(() => Attendance, (attendance) => attendance.meeting)
+  public attendance!: Attendance[];
 }
