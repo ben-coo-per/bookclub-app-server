@@ -16,24 +16,30 @@ import { Reading } from "../entities";
 import { MeetingToReading } from "../entities/MeetingToReading";
 
 @InputType()
-class MeetingInput {
-  @Field(() => String)
-  meetingDate: Date;
-
-  @Field(() => [Int], { nullable: true })
-  readingIds?: number[];
+class ReadingAssignment {
+  @Field()
+  readingId!: number;
 
   @Field({ nullable: true })
-  meetingLink?: string;
-
-  @Field({ nullable: true })
-  readingAssigmentType?: string;
+  readingAssignmentType?: string;
 
   @Field({ nullable: true })
   readingAssignmentStart?: string;
 
   @Field({ nullable: true })
   readingAssignmentEnd?: string;
+}
+
+@InputType()
+class MeetingInput {
+  @Field(() => String)
+  meetingDate: Date;
+
+  @Field({ nullable: true })
+  meetingLink?: string;
+
+  @Field(() => [ReadingAssignment], { nullable: true })
+  readingAssignments?: ReadingAssignment[];
 }
 
 @ObjectType()
@@ -57,7 +63,7 @@ class ReadingAssignmentsResponse {
   meetingId: number;
 
   @Field({ nullable: true })
-  readingAssigmentType?: string;
+  readingAssignmentType?: string;
 
   @Field({ nullable: true })
   readingAssignmentStart?: string;
@@ -191,31 +197,6 @@ export class MeetingResolver {
     };
   }
 
-  // @Query(() => [ReadingAssignmentsResponse])
-  // async currentReadingAssignments() {
-  //   const currentReadingMeetings = await getConnection()
-  //     .getRepository(Reading)
-  //     .createQueryBuilder("r")
-  //     .where({ currentlyReading: true })
-  //     .innerJoinAndSelect("r.meetingToReading", "mtr")
-  //     .leftJoinAndSelect("mtr.meeting", "m")
-  //     .getRawMany();
-
-  //   let readingAssignments = currentReadingMeetings.map((rm) => {
-  //     return {
-  //       readingId: rm.r_id,
-  //       meetingId: rm.m_id,
-  //       readingAssigmentType: rm.mtr_readingAssigmentType,
-  //       readingAssignmentStart: rm.mtr_readingAssignmentStart,
-  //       readingAssignmentEnd: rm.mtr_readingAssignmentEnd,
-
-  //       meetingDate: rm.m_meetingDate,
-  //     };
-  //   });
-
-  //   return readingAssignments;
-  // }
-
   @Query(() => [ReadingAssignmentsResponse])
   async readingAssignments(
     @Arg("meetingId", () => Int, { nullable: true }) meetingId: number | null
@@ -232,7 +213,7 @@ export class MeetingResolver {
       return {
         readingId: rm.r_id,
         meetingId: rm.m_id,
-        readingAssigmentType: rm.mtr_readingAssigmentType,
+        readingAssignmentType: rm.mtr_readingAssignmentType,
         readingAssignmentStart: rm.mtr_readingAssignmentStart,
         readingAssignmentEnd: rm.mtr_readingAssignmentEnd,
         author: rm.r_author,
@@ -246,33 +227,39 @@ export class MeetingResolver {
 
   @Mutation(() => Meeting)
   async createMeeting(
-    @Arg("data", () => MeetingInput) meetingInput: MeetingInput
+    @Arg("meetingInput", () => MeetingInput) meetingInput: MeetingInput
   ) {
     const meeting = await Meeting.create({
       meetingDate: meetingInput.meetingDate,
       meetingLink: meetingInput.meetingLink,
     }).save();
 
-    if (meetingInput.readingIds) {
+    if (
+      meetingInput.readingAssignments &&
+      meetingInput.readingAssignments.length > 0
+    ) {
       // Find associated readings
       const associatedReadings = await getConnection()
         .createQueryBuilder()
         .select("*")
         .from(Reading, "")
         .where("id IN(:...ids)", {
-          ids: meetingInput.readingIds,
+          ids: meetingInput.readingAssignments.map((ra) => ra.readingId),
         })
         .execute();
 
       await associatedReadings.forEach(async (reading: Reading) => {
+        const thisReading = meetingInput.readingAssignments?.filter(
+          (ra) => ra.readingId === reading.id
+        )[0];
         const mtr = new MeetingToReading();
         mtr.meetingId = meeting.id;
         mtr.readingId = reading.id;
         mtr.meeting = meeting;
         mtr.reading = reading;
-        mtr.readingAssigmentType = meetingInput.readingAssigmentType;
-        mtr.readingAssignmentStart = meetingInput.readingAssignmentStart;
-        mtr.readingAssignmentEnd = meetingInput.readingAssignmentEnd;
+        mtr.readingAssignmentType = thisReading?.readingAssignmentType;
+        mtr.readingAssignmentStart = thisReading?.readingAssignmentStart;
+        mtr.readingAssignmentEnd = thisReading?.readingAssignmentEnd;
         await getConnection().manager.save(mtr);
       });
     }

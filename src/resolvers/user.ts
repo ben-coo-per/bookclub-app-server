@@ -53,6 +53,11 @@ export class UserResolver {
     return user;
   }
 
+  @Query(() => [User])
+  async allUsers() {
+    return await User.find({});
+  }
+
   @Mutation(() => UserResponse)
   async changePassword(
     @Arg("token") token: string,

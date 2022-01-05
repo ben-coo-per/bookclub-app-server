@@ -65,7 +65,7 @@ export class RatingResolver {
   async addRating(
     @Arg("input", () => RatingInput) input: RatingInput,
     @Ctx() { req }: MyContext
-  ): Promise<RatingResponse> {
+  ): Promise<Partial<RatingResponse>> {
     const rating = await Rating.create({
       ...input,
       userId: req.session.userId,
@@ -73,13 +73,22 @@ export class RatingResolver {
 
     //Update corresponding reading avg rating
     let updatedAvgRating;
-    const reading = await Reading.findOne(rating.readingId, {
-      relations: ["ratings"],
-    });
 
-    if (reading?.ratings) {
-      updatedAvgRating = getAverageRating(reading.ratings);
-      await Reading.update({ id: reading.id }, { avgRating: updatedAvgRating });
+    const ratings = await Rating.find({ readingId: input.readingId });
+
+    // const reading = await Reading.findOne(
+    //   { id: rating.readingId },
+    //   {
+    //     relations: ["ratings"],
+    //   }
+    // );
+
+    if (ratings) {
+      updatedAvgRating = getAverageRating(ratings);
+      await Reading.update(
+        { id: input.readingId },
+        { avgRating: updatedAvgRating }
+      );
       return { rating, avgRating: updatedAvgRating };
     }
 
@@ -112,13 +121,14 @@ export class RatingResolver {
 
     //Update corresponding reading avg rating
     let updatedAvgRating;
-    const reading = await Reading.findOne(rating.readingId, {
-      relations: ["ratings"],
-    });
+    const ratings = await Rating.find({ readingId: rating.readingId });
 
-    if (reading?.ratings) {
-      updatedAvgRating = getAverageRating(reading.ratings);
-      await Reading.update({ id: reading.id }, { avgRating: updatedAvgRating });
+    if (ratings) {
+      updatedAvgRating = getAverageRating(ratings);
+      await Reading.update(
+        { id: rating.readingId },
+        { avgRating: updatedAvgRating }
+      );
       return { rating, avgRating: updatedAvgRating };
     }
 

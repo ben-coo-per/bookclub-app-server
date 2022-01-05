@@ -45,9 +45,7 @@ export class Reading extends BaseEntity {
   @Column({ type: "enum", enum: ReadingType, nullable: true })
   type?: ReadingType;
 
-  @OneToMany(() => Rating, (rating) => rating.reading, {
-    eager: true,
-  })
+  @OneToMany(() => Rating, (rating) => rating.reading)
   @JoinColumn()
   ratings: Rating[];
 

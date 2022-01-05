@@ -19,7 +19,7 @@ export class MeetingToReading {
   public reading!: Reading;
 
   @Column({ nullable: true })
-  public readingAssigmentType?: string;
+  public readingAssignmentType?: string;
 
   @Column({ nullable: true })
   public readingAssignmentStart?: string;
