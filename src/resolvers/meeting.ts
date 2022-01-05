@@ -322,18 +322,41 @@ export class MeetingResolver {
     @Arg("readingId", () => Int) readingId: number,
     @Arg("meetingId", () => Int) meetingId: number
   ) {
-    await getConnection()
-      .createQueryBuilder()
-      .delete()
-      .from(MeetingToReading, "")
-      .where("readingId = :readingId", {
-        readingId: readingId,
-      })
-      .andWhere("meetingId = :meetingId", {
-        meetingId: meetingId,
-      })
-      .execute();
+    try {
+      await getConnection()
+        .createQueryBuilder()
+        .delete()
+        .from(MeetingToReading, "")
+        .where("readingId = :readingId", {
+          readingId: readingId,
+        })
+        .andWhere("meetingId = :meetingId", {
+          meetingId: meetingId,
+        })
+        .execute();
 
-    return true;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async deleteMeeting(@Arg("meetingId", () => Int) meetingId: number) {
+    try {
+      await getConnection()
+        .createQueryBuilder()
+        .delete()
+        .from(Meeting, "")
+        .andWhere("id = :meetingId", {
+          meetingId: meetingId,
+        })
+        .execute();
+
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
