@@ -32,8 +32,8 @@ class ReadingAssignment {
 
 @InputType()
 class MeetingInput {
-  @Field(() => String)
-  meetingDate: Date;
+  @Field(() => String, { nullable: true })
+  meetingDate?: Date;
 
   @Field({ nullable: true })
   meetingLink?: string;
@@ -226,6 +226,7 @@ export class MeetingResolver {
   }
 
   @Mutation(() => Meeting)
+  @UseMiddleware(isAuth)
   async createMeeting(
     @Arg("meetingInput", () => MeetingInput) meetingInput: MeetingInput
   ) {
@@ -265,5 +266,74 @@ export class MeetingResolver {
     }
 
     return meeting;
+  }
+
+  @Mutation(() => Meeting)
+  @UseMiddleware(isAuth)
+  async updateMeeting(
+    @Arg("meetingInput", () => MeetingInput) meetingInput: MeetingInput,
+    @Arg("id", () => Int) id: number
+  ) {
+    const meeting = await Meeting.findOne(id);
+    if (
+      meetingInput.readingAssignments &&
+      meetingInput.readingAssignments.length > 0 &&
+      meeting
+    ) {
+      // Find associated readings
+      const associatedReadings = await getConnection()
+        .createQueryBuilder()
+        .select("*")
+        .from(Reading, "")
+        .where("id IN(:...ids)", {
+          ids: meetingInput.readingAssignments.map((ra) => ra.readingId),
+        })
+        .execute();
+
+      await associatedReadings.forEach(async (reading: Reading) => {
+        const thisReading = meetingInput.readingAssignments?.filter(
+          (ra) => ra.readingId === reading.id
+        )[0];
+        const mtr = new MeetingToReading();
+        mtr.meetingId = meeting.id;
+        mtr.readingId = reading.id;
+        mtr.meeting = meeting;
+        mtr.reading = reading;
+        mtr.readingAssignmentType = thisReading?.readingAssignmentType;
+        mtr.readingAssignmentStart = thisReading?.readingAssignmentStart;
+        mtr.readingAssignmentEnd = thisReading?.readingAssignmentEnd;
+        await getConnection().manager.save(mtr);
+      });
+    }
+    const updatedMeeting = {
+      ...meeting,
+      meetingDate: meetingInput.meetingDate || meeting?.meetingDate,
+      meetingLink: meetingInput.meetingLink || meeting?.meetingLink,
+    };
+
+    await Meeting.update({ id }, { ...updatedMeeting });
+
+    return meeting;
+  }
+
+  @Mutation(() => Boolean)
+  @UseMiddleware(isAuth)
+  async removeReadingFromMeeting(
+    @Arg("readingId", () => Int) readingId: number,
+    @Arg("meetingId", () => Int) meetingId: number
+  ) {
+    await getConnection()
+      .createQueryBuilder()
+      .delete()
+      .from(MeetingToReading, "")
+      .where("readingId = :readingId", {
+        readingId: readingId,
+      })
+      .andWhere("meetingId = :meetingId", {
+        meetingId: meetingId,
+      })
+      .execute();
+
+    return true;
   }
 }

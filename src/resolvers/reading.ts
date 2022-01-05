@@ -109,7 +109,6 @@ export class ReadingResolver {
 
     try {
       if (typeof readingInput !== null) {
-        console.log("called");
         await Reading.update({ id }, { ...readingInput });
       }
 
